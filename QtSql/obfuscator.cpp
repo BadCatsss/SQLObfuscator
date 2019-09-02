@@ -9,7 +9,7 @@ Obfuscator::~Obfuscator()
 {
 }
 
-void Obfuscator:: addToErrorList(QString errorMassege)
+void Obfuscator:: addToErrorList(const QString& errorMassege)
 {
     obfusicationErrors.push_back(errorMassege);
 }
@@ -21,12 +21,12 @@ void Obfuscator::printErrorList()
 }
 bool Obfuscator::openDatabaseFile()
 {
-    std::string tmpStr = this->filePath.toStdString();
-    int startSearchPosition = tmpStr.find(".");
-    if (tmpStr.find("db",startSearchPosition) != std::string::npos)
+
+    int startSearchPosition = filePath.lastIndexOf(".");
+    if (filePath.indexOf("db",startSearchPosition) != -1)
     {
-        tmpStr.erase(tmpStr.begin() + tmpStr.find("."), tmpStr.end());
-        this->databaseName = QString::fromStdString(tmpStr);
+        filePath.remove(filePath.lastIndexOf("."), filePath.length() - filePath.lastIndexOf("."));
+        this->databaseName = filePath;
         consoleOutput << "file successfull open" << endl;
         return true;
     }
@@ -38,6 +38,7 @@ bool Obfuscator::openDatabaseFile()
 
 bool Obfuscator::createConnection()
 {
+
     dbase = QSqlDatabase::addDatabase("QSQLITE", "mobileStandarts");
     dbase.setDatabaseName(databaseName + ".db");
     if (!dbase.open()) {
@@ -45,7 +46,6 @@ bool Obfuscator::createConnection()
         return false;
     }
     else {
-        mainCurrentQuery = new QSqlQuery(dbase);
         consoleOutput << "successfull connect to database" << endl;
         return true;
     }
@@ -53,14 +53,15 @@ bool Obfuscator::createConnection()
 bool Obfuscator::addOperators()
 {
     bool returnVale = false;
+    QSqlQuery mainCurrentQuery(dbase);
     QVector<QString> columnsName = {":OPERATORID", ":MCC", ":MNC", ":NAME", ":FULLNAME"};
     for (int operatorsCount = 0; operatorsCount < this->addingOperators.size(); ++operatorsCount) {
-        if (mainCurrentQuery->prepare("INSERT INTO OPERATORS(OPERATORID,MCC,MNC,NAME,FULLNAME)  VALUES (:OPERATORID, :MCC, :MNC, :NAME,:FULLNAME)"))
+        if (mainCurrentQuery.prepare("INSERT INTO OPERATORS(OPERATORID,MCC,MNC,NAME,FULLNAME)  VALUES (:OPERATORID, :MCC, :MNC, :NAME,:FULLNAME)"))
         {
             for (int j = 0; j < columnsName.size(); ++j) {
-                mainCurrentQuery->bindValue(columnsName[j], this->addingOperators[operatorsCount][j]);
+                mainCurrentQuery.bindValue(columnsName[j], this->addingOperators[operatorsCount][j]);
             }
-            mainCurrentQuery->exec();
+            mainCurrentQuery.exec();
             returnVale = true;
         }
         else {
@@ -76,8 +77,9 @@ bool Obfuscator::addOperators()
 }
 bool Obfuscator::changeForeginKey()
 {
-    if (mainCurrentQuery->prepare("UPDATE CELLS SET OPERATORID=ABS(RANDOM()) % (729 - 725) + 725")) {
-        mainCurrentQuery->exec();
+    QSqlQuery mainCurrentQuery(dbase);
+    if (mainCurrentQuery.prepare("UPDATE CELLS SET OPERATORID=ABS(RANDOM()) % (729 - 725) + 725")) {
+        mainCurrentQuery.exec();
         consoleOutput << "Foregin Key successfull changed" << endl;
         return true;
     }
@@ -86,33 +88,34 @@ bool Obfuscator::changeForeginKey()
         return false;
     }
 }
-bool Obfuscator::changeTableData(QString column, int mode)
+bool Obfuscator::changeTableData(const QString& column, int mode)
 {
-    QSqlQuery* sideConnection = new QSqlQuery(dbase);
+    QSqlQuery mainCurrentQuery(dbase);
+    QSqlQuery sideConnection (dbase);
     QString querySelectExpression;
-    std::string queryUpdateExpression;
-    std::string currentValues;
-    std::string subExpression;
+    QString queryUpdateExpression;
+    QString currentValues;
+    QString subExpression;
     int currentWorkIndex;
     bool updateSuccessFlag=false;
-    QVector<std::string> columnValues;
+    QVector<QString> columnValues;
     QSqlRecord rec;
 
     if (mode == 0) { //change LAC ,CELLID
         querySelectExpression = "SELECT " + column + " FROM CELLS";
-        mainCurrentQuery->exec(querySelectExpression);
-        rec = mainCurrentQuery->record();
-        currentWorkIndex = rec.indexOf(column.toStdString().c_str()); // index of the field
-        while (mainCurrentQuery->next()) {
-            columnValues.push_back(mainCurrentQuery->value(currentWorkIndex).toString().toStdString());
+        mainCurrentQuery.exec(querySelectExpression);
+        rec = mainCurrentQuery.record();
+        currentWorkIndex = rec.indexOf(column); // index of the field
+        while (mainCurrentQuery.next()) {
+            columnValues.push_back(mainCurrentQuery.value(currentWorkIndex).toString());
         }
 
         for (int var = 0; var < columnValues.size(); ++var) {
             currentValues = columnValues[var];
-            queryUpdateExpression = "UPDATE   CELLS  SET " + column.toStdString() + "=" + column.toStdString() + "+ABS(RANDOM()) % (1000 - 10) + 10 WHERE " + column.toStdString() + "=";
+            queryUpdateExpression =QString::fromStdString( "UPDATE   CELLS  SET " + column.toStdString() + "=" + column.toStdString() + "+ABS(RANDOM()) % (1000 - 10) + 10 WHERE " + column.toStdString() + "=");
             queryUpdateExpression.append(currentValues);
-            if (sideConnection->prepare(queryUpdateExpression.c_str())) {
-                sideConnection->exec();
+            if (sideConnection.prepare(queryUpdateExpression)) {
+                sideConnection.exec();
                 updateSuccessFlag = true;
             }
             else {
@@ -122,22 +125,23 @@ bool Obfuscator::changeTableData(QString column, int mode)
         }
 
     }
-    if (mode == 1) //change OPERATORID
+    if (mode == 1) //change CELL_NAME
     {
         querySelectExpression="SELECT " + column + " FROM CELLS";
-        mainCurrentQuery->exec(querySelectExpression);
+        mainCurrentQuery.exec(querySelectExpression);
+        rec = mainCurrentQuery.record();
         currentWorkIndex=rec.indexOf(column);
-        while (mainCurrentQuery->next()) {
-            columnValues.push_back(mainCurrentQuery->value(currentWorkIndex).toString().toStdString());
+        while (mainCurrentQuery.next()) {
+            columnValues.push_back(mainCurrentQuery.value(currentWorkIndex).toString());
         }
 
         for (int var = 0; var < columnValues.size(); ++var) {
             currentValues = columnValues[var];
             subExpression = "CellName"+currentValues;
 
-            queryUpdateExpression="UPDATE CELLS  SET CELL_NAME='" +subExpression;+ "' WHERE OPERATORID = "+currentValues;
-            if (sideConnection->prepare(queryUpdateExpression.c_str())) {
-                sideConnection->exec();
+            queryUpdateExpression="UPDATE CELLS  SET CELL_NAME='" +subExpression + "' WHERE OPERATORID = "+currentValues;
+            if (sideConnection.prepare(queryUpdateExpression)) {
+                sideConnection.exec();
                 updateSuccessFlag = true;
             }
             else {
@@ -160,8 +164,9 @@ bool Obfuscator::changeTableData(QString column, int mode)
 
 bool Obfuscator::changeAdress()
 {
-    if (mainCurrentQuery->prepare("UPDATE CELLS SET ADR='Some Adress'")) {
-        mainCurrentQuery->exec();
+    QSqlQuery mainCurrentQuery(dbase);
+    if (mainCurrentQuery.prepare("UPDATE CELLS SET ADR = 'Some Adress'")) {
+        mainCurrentQuery.exec();
         consoleOutput << "Adress was changed" << endl;
         return true;
     }
@@ -172,25 +177,16 @@ bool Obfuscator::changeAdress()
 }
 
 bool Obfuscator::makeObfuscation()
-{ QVector<bool> returnValues;
-    if ( this->openDatabaseFile() && this->createConnection() ) {
-        returnValues.push_back(this->addOperators());
-        returnValues.push_back(this->changeForeginKey());
-        returnValues.push_back( this->changeTableData("LAC",0));
-        returnValues.push_back(this->changeTableData("CELLID",0));
-        returnValues.push_back( this->changeTableData("OPERATORID",0));
-        returnValues.push_back(this->changeAdress());
+{
+    if ( this->openDatabaseFile() && this->createConnection()
+         && this->addOperators() &&   this->changeForeginKey()
+         &&  this->changeTableData("LAC",0) && this->changeTableData("CELLID",0)
+         &&  this->changeTableData("OPERATORID",1) &&   this->changeAdress() ) {
+
+        return true;
     }
     else {
         printErrorList();
+        return false;
     }
-    for (auto finalReturnValues : returnValues) {
-        if (!finalReturnValues) {
-            printErrorList();
-            return false;
-        }
-    }
-    return true;
-
-
 }
