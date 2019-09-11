@@ -175,14 +175,66 @@ bool Obfuscator::changeAdress()
         return false;
     }
 }
+bool Obfuscator::relocatePosition(const QString& column)
+{
+    QSqlQuery mainCurrentQuery(dbase);
+    QSqlQuery sideConnection (dbase);
+
+    QString querySelectExpression;
+    QString queryUpdateExpression;
+
+
+    QString currentValues;
+    QString subExpression;
+    int currentWorkIndex;
+    bool updateSuccessFlag=false;
+    QVector<QString> columnValues;
+    QSqlRecord rec;
+    querySelectExpression = "SELECT " + column + " FROM CELLS";
+    mainCurrentQuery.exec(querySelectExpression);
+    rec = mainCurrentQuery.record();
+    currentWorkIndex = rec.indexOf(column); // index of the field
+    while (mainCurrentQuery.next()) {
+        columnValues.push_back(mainCurrentQuery.value(currentWorkIndex).toString());
+    }
+    for (int var = 0; var < columnValues.size(); ++var) {
+        currentValues = columnValues[var];
+        if (column=="LAT") {
+            subExpression = QString::number(currentValues.toDouble()*relocateLatConst);
+        }
+        if (column=="LON") {
+            subExpression = QString::number(currentValues.toDouble()*relocateLonConst);
+        }
+
+
+        queryUpdateExpression="UPDATE CELLS  SET " + column+ "='" +subExpression + "' WHERE " + column + " = "+currentValues;
+        if (sideConnection.prepare(queryUpdateExpression)) {
+            sideConnection.exec();
+            updateSuccessFlag = true;
+        }
+        else {
+            updateSuccessFlag = false;
+            break;
+        }
+    }
+    if (updateSuccessFlag) {
+        consoleOutput << "Coordinate was changed" << endl;
+    }
+    else {
+        addToErrorList("Coordinate was not changed");
+    }
+    return updateSuccessFlag;
+}
 
 bool Obfuscator::makeObfuscation()
 {
     if ( this->openDatabaseFile() && this->createConnection()
          && this->addOperators() &&   this->changeForeginKey()
          &&  this->changeTableData("LAC",0) && this->changeTableData("CELLID",0)
-         &&  this->changeTableData("OPERATORID",1) &&   this->changeAdress() ) {
-
+         &&  this->changeTableData("OPERATORID",1) &&
+         this->changeAdress() &&
+         this->relocatePosition("LAT") &&
+         this->relocatePosition("LON") ) {
         return true;
     }
     else {
