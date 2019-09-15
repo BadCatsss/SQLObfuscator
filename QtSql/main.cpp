@@ -17,6 +17,5 @@ int main(int argc, char *argv[])
     else {
         out << "Obfuscation not complate" << endl;
     }
-
     return a.exec();
 }
