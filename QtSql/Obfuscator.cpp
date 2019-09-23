@@ -22,7 +22,6 @@ void Obfuscator::printErrorList()
 }
 bool Obfuscator::openDatabaseFile()
 {
-
     int startSearchPosition = filePath.lastIndexOf(".");
     if (filePath.indexOf("db",startSearchPosition) != -1)
     {
@@ -66,7 +65,7 @@ bool Obfuscator::addOperators()
             for (int j = 0; j < columnsName.size(); ++j) {
                 mainCurrentQuery.bindValue(columnsName[j], this->addingOperators[operatorsCount][j]);
             }
-                mainCurrentQuery.exec();
+            mainCurrentQuery.exec();
         }
         else {
             addToErrorList("Cant add operators to table");
@@ -93,72 +92,29 @@ bool Obfuscator::changeForeginKey()
 bool Obfuscator::changeLacCid(const QString& column)
 {
     QSqlQuery mainCurrentQuery(dbase);
-    if ( mainCurrentQuery.prepare(QString("SELECT %1 FROM CELLS").arg(column))) {
+    if ( mainCurrentQuery.prepare(QString("UPDATE CELLS SET %1=%1+ABS(RANDOM()) % (1000 - 10) * 10 WHERE %1=%1").arg(column)) ) {
         mainCurrentQuery.exec();
-        int currentWorkIndex;
-        QSqlRecord rec = mainCurrentQuery.record();
-        QVector<QString> columnValues;
-        currentWorkIndex = rec.indexOf(column); // index of the field
-        if (currentWorkIndex != -1) {
-            while (mainCurrentQuery.next()) {
-                columnValues.push_back(mainCurrentQuery.value(currentWorkIndex).toString());
-            }
-            QSqlQuery sideConnection(dbase);
-            QString currentValues;
-            for (int var = 0; var < columnValues.size(); ++var) {
-                currentValues = columnValues[var];
-                sideConnection.prepare(QString("UPDATE CELLS SET %1=%1+ABS(RANDOM()) % (1000 - 10) * 10 WHERE %1=:values").arg(column));
-                sideConnection.bindValue(":values", currentValues);
-                if (!sideConnection.exec()) {
-                    addToErrorList(column + " was not changed in side connection");
-                    return false;
-                }
-            }
-        }
-        else {
-            addToErrorList(column + " was not changed.Cant read table at at the specified index.");
-            return false;
-        }
+        consoleOutput << column + " was changed" << endl;
+        return true;
     }
     else {
         addToErrorList(column + " was not changed.Query not prepare.");
         return false;
     }
-    consoleOutput << column + " was changed" << endl;
-    return true;
 }
-bool Obfuscator::changeCellName(const QString& changedColumn,const QString& columnData )
+bool Obfuscator::changeCellName()
 {
     QSqlQuery sideConnection(dbase);
     QSqlQuery mainCurrentQuery(dbase);
-    if ( mainCurrentQuery.prepare(QString("SELECT %1 FROM CELLS").arg(columnData))) {
+    if ( mainCurrentQuery.prepare(QString("UPDATE CELLS SET CELL_NAME = 'CellName_' || CELLID"))) {
         mainCurrentQuery.exec();
-        QSqlRecord rec;
-        int currentWorkIndex;
-        rec = mainCurrentQuery.record();
-        currentWorkIndex = rec.indexOf(columnData); // index of the field
-        QVector<QString> columnValues;
-        while (mainCurrentQuery.next()) {
-            columnValues.push_back(mainCurrentQuery.value(currentWorkIndex).toString());
-        }
-        QString currentValues;
-        for (int var = 0; var < columnValues.size(); ++var) {
-            currentValues = columnValues[var];
-            sideConnection.prepare(QString("UPDATE CELLS SET %1=:newValue WHERE %2=:currentValue").arg(changedColumn,columnData));
-            sideConnection.bindValue(":currentValue", currentValues);
-            sideConnection.bindValue(":newValue", "CellName"+currentValues);
-            if (!sideConnection.exec()) {
-                addToErrorList("Name was not changed. Error in side connection.");
-                return false;
-            }
-        }
+        consoleOutput << "Cell name was changed" << endl;
+        return true;
     }
     else {
         addToErrorList("Name was not changed.Query not prepare");
         return false;
     }
-    consoleOutput << "Cell name was changed" << endl;
-    return true;
 }
 bool Obfuscator::changeAdress()
 {
@@ -176,31 +132,10 @@ bool Obfuscator::changeAdress()
 bool Obfuscator::relocatePosition(const QString& column,const double coefficient)
 {
     QSqlQuery mainCurrentQuery(dbase);
-    if (mainCurrentQuery.prepare(QString("SELECT %1 FROM CELLS").arg(column))) {
-
-        mainCurrentQuery.exec();
-        QSqlQuery sideConnection (dbase);
-        QString currentValues;
-        int currentWorkIndex;
-        QVector<QString> columnValues;
-        QSqlRecord rec;
-        rec = mainCurrentQuery.record();
-        currentWorkIndex = rec.indexOf(column); // index of the field
-
-        while (mainCurrentQuery.next()) {
-            columnValues.push_back(mainCurrentQuery.value(currentWorkIndex).toString());
-        }
-        for (int var = 0; var < columnValues.size(); ++var) {
-            currentValues = columnValues[var];
-            sideConnection.prepare(QString("UPDATE CELLS  SET  %1 = :coordinate   WHERE  %1 = :values").arg(column));
-            sideConnection.bindValue(":values",currentValues);
-            sideConnection.bindValue(":coordinate",QString::number(currentValues.toDouble()*coefficient));
-            if (!sideConnection.exec()) {
-                addToErrorList("Position was not relocate.Error in side connection.");
-                return false;
-            }
-        }
-        consoleOutput << "Position - " + column + " - was relocate" << endl;
+    mainCurrentQuery.prepare(QString("UPDATE CELLS  SET  %1 = %1 * :coeficient WHERE  %1 = %1").arg(column));
+    mainCurrentQuery.bindValue(":coeficient", coefficient);
+    if (mainCurrentQuery.exec()) {
+        consoleOutput << column + " was changed" << endl;
         return true;
     }
     else {
@@ -213,7 +148,7 @@ bool Obfuscator::makeObfuscation()
     if ( this->openDatabaseFile() && this->createConnection("LAC")
          && this->addOperators() && this->changeForeginKey()
          &&  this->changeLacCid("LAC") && this->changeLacCid("CELLID")
-         &&  this->changeCellName("CELL_NAME","CELLID") && this->changeAdress()
+         &&  this->changeCellName() && this->changeAdress()
          &&  this->relocatePosition("LAT",this->relocateLatConst) && this->relocatePosition("LON",this->relocateLonConst) ) {
         return true;
     }

@@ -21,7 +21,7 @@ private:
     bool addOperators();
     bool changeForeginKey();
     bool changeLacCid(const QString& column);
-    bool changeCellName(const QString& column, const QString& values);
+    bool changeCellName();
     bool changeAdress();
     bool relocatePosition(const QString& colum, const double coefficient);
     void addToErrorList(const QString& errorMassege);
