@@ -12,13 +12,11 @@ Obfuscator::Obfuscator(const QString& path):consoleOutput(stdout)
 }
 void Obfuscator:: addToErrorList(const QString& errorMassege)
 {
-    obfusicationErrors.push_back(errorMassege);
+    obfusicationError=errorMassege;
 }
 void Obfuscator::printErrorList()
 {
-    for (auto errorMessage : obfusicationErrors) {
-        consoleOutput << errorMessage << endl;
-    }
+        consoleOutput << obfusicationError << endl;
 }
 bool Obfuscator::openDatabaseFile()
 {

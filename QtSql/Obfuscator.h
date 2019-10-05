@@ -9,10 +9,10 @@ private:
     QString filePath = "";
     QString databaseName = "";
     QSqlDatabase dbase;
-    QVector<QString> obfusicationErrors;
+    QString obfusicationError;
     QTextStream consoleOutput;
     QVector<QVector<QString>> addingOperators;
-    const double lonBorderCoordinate[4]{1, 2.05, 1.79, 5.2}; // долгота С, Ю, З , В
+    const double lonBorderCoordinate[4]{1, 2.05, 1.79, 5.2}; // долгота С, В, Ю , 3
     const double latBorderCoordinate[4]{3.57, 1.4, 3.33, 1}; // широта С, З, Ю , В
     double relocateLatConst=1;
     double relocateLonConst=1;
