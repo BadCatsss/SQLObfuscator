@@ -2,6 +2,7 @@
 #define OBFUSCATOR_H
 #include <QtSql>
 #include <QTextStream>
+#include <QFileInfo>
 
 class Obfuscator
 {

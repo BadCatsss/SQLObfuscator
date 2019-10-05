@@ -20,16 +20,23 @@ void Obfuscator::printErrorList()
 }
 bool Obfuscator::openDatabaseFile()
 {
-    int startSearchPosition = filePath.lastIndexOf(".");
-    if (QFileInfo::exists(filePath) && filePath.indexOf("db",startSearchPosition) != -1)
+    if (QFile::exists(filePath))
     {
-        filePath.remove(filePath.lastIndexOf("."), filePath.length() - filePath.lastIndexOf("."));
-        this->databaseName = filePath;
-        consoleOutput << "file successfull open" << endl;
-        return true;
+        int startSearchPosition = filePath.lastIndexOf(".");
+        if (filePath.indexOf("db",startSearchPosition) != -1)
+        {
+            filePath.remove(filePath.lastIndexOf("."), filePath.length() - filePath.lastIndexOf("."));
+            this->databaseName = filePath;
+            consoleOutput << "file successfull open" << endl;
+            return true;
+        }
+        else {
+            addToErrorList("Cant open file. Incorrect format");
+            return false;
+        }
     }
     else {
-        addToErrorList("Cant open file. Incorrect format");
+        addToErrorList("The specified file does not exist on this path.");
         return false;
     }
 }
