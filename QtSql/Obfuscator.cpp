@@ -21,7 +21,7 @@ void Obfuscator::printErrorList()
 bool Obfuscator::openDatabaseFile()
 {
     int startSearchPosition = filePath.lastIndexOf(".");
-    if (filePath.indexOf("db",startSearchPosition) != -1)
+    if (QFileInfo::exists(filePath) && filePath.indexOf("db",startSearchPosition) != -1)
     {
         filePath.remove(filePath.lastIndexOf("."), filePath.length() - filePath.lastIndexOf("."));
         this->databaseName = filePath;
